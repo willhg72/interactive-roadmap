@@ -3,8 +3,12 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+// In development, Vite handles HMR and client-side routing.
+// In production, Vercel handles body parsing, so we only need this for local dev.
+if (app.get("env") === "development") {
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: false }));
+}
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -63,7 +67,6 @@ app.use((req, res, next) => {
   server.listen({
     port,
     host: "0.0.0.0",
-    reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
   });
