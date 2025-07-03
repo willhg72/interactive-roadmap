@@ -87,45 +87,43 @@ function showModalZoom(boxGroup: any, box: any, originalX: number, originalY: nu
   }
   
   // Create a text background panel for better readability
+  const panelWidth = CANVAS_CONFIG.boxWidth * 3.6;
+  const panelHeight = 280;
   const textPanel = clonedGroup.append("rect")
-    .attr("x", centerX - CANVAS_CONFIG.boxWidth * 1.8)
+    .attr("x", centerX - panelWidth / 2)
     .attr("y", centerY + CANVAS_CONFIG.boxHeight * 1.5 + 30)
-    .attr("width", CANVAS_CONFIG.boxWidth * 3.6)
-    .attr("height", 300)
+    .attr("width", panelWidth)
+    .attr("height", panelHeight)
     .attr("fill", "rgba(0, 0, 0, 0.8)")
     .attr("rx", 8)
     .attr("stroke", "rgba(255, 255, 255, 0.2)")
     .attr("stroke-width", 1);
 
   // Clone and scale the goal text with better visibility
-  const wrappedGoal = wrapText(box.goal, 60);
-  const goalY = centerY + CANVAS_CONFIG.boxHeight * 1.5 + 70;
+  const wrappedGoal = wrapText(box.goal, 50);
+  const goalY = centerY + CANVAS_CONFIG.boxHeight * 1.5 + 80;
+  const textStartX = centerX - panelWidth / 2 + 20; // Add padding from panel edge
   
   wrappedGoal.forEach((line, i) => {
     const goalText = clonedGroup.append("text")
-      .attr("x", centerX - CANVAS_CONFIG.boxWidth * 1.5)
-      .attr("y", goalY + (i * 45))
+      .attr("x", textStartX)
+      .attr("y", goalY + (i * 40))
       .attr("fill", "white")
-      .attr("font-size", "32")
+      .attr("font-size", "28")
       .style("pointer-events", "none");
 
     // Check if line contains "Goal:" or "Outcomes:" and format accordingly
     if (line.includes("Goal:") || line.includes("Outcomes:")) {
       const parts = line.split(/(Goal:|Outcomes:)/);
-      let xOffset = 0;
       
       parts.forEach(part => {
         if (part === "Goal:" || part === "Outcomes:") {
           const boldSpan = goalText.append("tspan")
-            .attr("x", centerX - CANVAS_CONFIG.boxWidth * 1.5 + xOffset)
             .attr("font-weight", "bold")
             .text(part);
-          xOffset += part.length * 20;
         } else if (part.trim()) {
           const normalSpan = goalText.append("tspan")
-            .attr("x", centerX - CANVAS_CONFIG.boxWidth * 1.5 + xOffset)
             .text(part);
-          xOffset += part.length * 16;
         }
       });
     } else {
