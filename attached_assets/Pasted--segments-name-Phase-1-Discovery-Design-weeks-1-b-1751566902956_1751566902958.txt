@@ -1,0 +1,70 @@
+{
+  "segments": [
+    {
+      "name": "Phase 1: Discovery & Design",
+      "weeks": 1,
+      "boxes": [
+        {
+          "title": "Design thinking & Workshop",
+          "goal": "Goal: Conduct a design thinking workshop to understand user needs and create a functional prototype of the MVP. Outcomes: Workshop completed and key findings documented."
+        },
+        {
+          "title": "UI/UX Design",
+          "goal": "Goal: Create all aspects of the UI/UX including wireframes, mockups, prototypes, and usability testing. Outcomes: Initial mockups complete."
+        }
+      ]
+    },
+    {
+      "name": "Phase 2: Technical Foundations",
+      "weeks": 1,
+      "boxes": [
+        {
+          "title": "Foundations",
+          "goal": "Goal: Establish a scalable and secure technical infrastructure using Airtable and React, including CI/CD pipelines and operational toolkits. Outcomes: Architecture defined, environments setup, pipelines implemented, and standards documented."
+        },
+        {
+          "title": "User Authentication and Authorization",
+          "goal": "Goal: Implement secure authentication and RBAC using PostgreSQL, with session and token management. Outcomes: Registration and login implemented, RBAC established, and session handling integrated."
+        }
+      ]
+    },
+    {
+      "name": "Phase 3: Core Features",
+      "weeks": 2,
+      "boxes": [
+        {
+          "title": "Synexa Intelligence Engine",
+          "goal": "Goal: Identify and score CPG brands using scraped data and AI, stored in Airtable. Outcomes: Scraper deployed, AI model integrated, schema defined, and top-leads API available."
+        },
+        {
+          "title": "Client Portal",
+          "goal": "Goal: Provide a branded self-service portal with AI-based FAQ bot and onboarding visibility. Outcomes: Portal deployed on Vercel, API integration working, Gemini chatbot live, and onboarding question reduction confirmed."
+        }
+      ]
+    },
+    {
+      "name": "Phase 4: Operational Engines",
+      "weeks": 2,
+      "boxes": [
+        {
+          "title": "Forecasting Engine",
+          "goal": "Goal: Replace Excel-based modeling with investor-grade forecasts using Airtable + AI. Outcomes: Tables created, formulas developed, PDF generation enabled, and margin reconciliation validated."
+        },
+        {
+          "title": "Playbook Engine",
+          "goal": "Goal: Automate SOPs and launch workflows with Slack alerts for milestones. Outcomes: Airtable SOP engine configured, Slack alerts integrated, and usage confirmed by internal teams."
+        }
+      ]
+    },
+    {
+      "name": "Phase 5: Stakeholder Dashboard",
+      "weeks": 1,
+      "boxes": [
+        {
+          "title": "Stakeholder Dashboard",
+          "goal": "Goal: Deliver live dashboards and automated reporting for investors and partners. Outcomes: Summary views built, PDF exports automated, stakeholder access enabled, and dashboard usage validated."
+        }
+      ]
+    }
+  ]
+}

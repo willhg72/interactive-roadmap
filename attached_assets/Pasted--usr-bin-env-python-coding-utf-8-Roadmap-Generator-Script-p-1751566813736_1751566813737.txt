@@ -1,0 +1,352 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+Roadmap Generator
+----------------
+Script para generar diagramas de roadmap en estilo cascada escalonada horizontal.
+Permite configurar segmentos, cuadros por segmento y duración en semanas.
+"""
+
+import os
+import math
+from PIL import Image, ImageDraw, ImageFont
+from dataclasses import dataclass
+from typing import List, Tuple
+
+@dataclass
+class Box:
+    """Representa un cuadro en el roadmap con título y descripción de meta."""
+    title: str
+    goal: str
+    color: Tuple[int, int, int] = (65, 134, 205)  # Color azul predeterminado
+    
+@dataclass
+class Segment:
+    """Representa un segmento del roadmap con su duración y cuadros."""
+    name: str
+    weeks: int
+    boxes: List[Box]
+    y_offset: int = 0  # Para el efecto escalonado
+
+class RoadmapGenerator:
+    """Genera diagramas de roadmap con un estilo profesional y escalonado."""
+
+    def __init__(self, bg_color=(255, 255, 255)):
+        self.bg_color = bg_color
+        self.padding = 120
+        self.box_width = 220
+        self.box_height = 70
+        self.goal_box_y_offset = 15
+        self.goal_text_max_width = self.box_width  # El texto de la meta se alinea con el ancho del cuadro
+        self.step_x = self.box_width + 60  # Reducir el espacio horizontal
+        self.step_y = 60
+        self.line_color = (130, 130, 130)  # Línea más oscura
+        self.line_width = 2  # Línea más gruesa
+        self.duration_line_color = (160, 160, 160)
+        self.corner_radius = 15  # Radio para las esquinas redondeadas
+
+        try:
+            self.font_title = ImageFont.truetype("arialbd.ttf", 14)
+            self.font_goal = ImageFont.truetype("arial.ttf", 13)
+            self.font_goal_bold = ImageFont.truetype("arialbd.ttf", 13)
+            self.font_duration = ImageFont.truetype("arial.ttf", 11)
+        except IOError:
+            self.font_title = ImageFont.load_default()
+            self.font_goal = ImageFont.load_default()
+            self.font_goal_bold = ImageFont.load_default() # Fallback simple
+            self.font_duration = ImageFont.load_default()
+
+    def _wrap_text(self, text, font, max_width):
+        words = text.split(' ')
+        lines = []
+        current_line = []
+        for word in words:
+            test_line = ' '.join(current_line + [word])
+            bbox = font.getbbox(test_line)
+            if (bbox[2] - bbox[0]) <= max_width:
+                current_line.append(word)
+            else:
+                lines.append(' '.join(current_line))
+                current_line = [word]
+        if current_line:
+            lines.append(' '.join(current_line))
+        return lines
+
+    def _draw_box(self, draw, box, x, y):
+        # Dibuja el cuadro de título
+        draw.rectangle([(x, y), (x + self.box_width, y + self.box_height)], fill=box.color)
+        
+        # Dibuja el texto del título (envuelto y centrado)
+        wrapped_title = self._wrap_text(box.title, self.font_title, self.box_width - 20)
+        title_h = self.font_title.getbbox("A")[3]
+        total_title_h = len(wrapped_title) * (title_h + 4)
+        text_y = y + (self.box_height - total_title_h) / 2
+        for line in wrapped_title:
+            line_w = self.font_title.getbbox(line)[2]
+            draw.text((x + (self.box_width - line_w) / 2, text_y), line, fill=(255, 255, 255), font=self.font_title)
+            text_y += title_h + 4
+
+        # Dibuja el texto de la meta justificado
+        goal_text = box.goal
+        wrapped_goal = self._wrap_text(goal_text, self.font_goal, self.goal_text_max_width)
+        text_y = y + self.box_height + self.goal_box_y_offset
+        
+        for i, line in enumerate(wrapped_goal):
+            words = line.split()
+            if not words:
+                continue
+
+            # Determinar el espaciado para justificar
+            is_last_line = (i == len(wrapped_goal) - 1)
+            is_justifiable = len(words) > 1 and not is_last_line
+            
+            space_width = self.font_goal.getbbox(' ')[2]
+            space_per_gap = space_width
+
+            if is_justifiable:
+                line_width_no_spaces = sum((self.font_goal_bold if w in ["Goal:", "Outcomes:"] else self.font_goal).getbbox(w)[2] for w in words)
+                space_to_distribute = self.goal_text_max_width - line_width_no_spaces
+                if len(words) > 1:
+                    space_per_gap = space_to_distribute / (len(words) - 1)
+
+            # Dibujar cada palabra
+            current_x = x
+            for idx, word in enumerate(words):
+                font = self.font_goal_bold if word in ["Goal:", "Outcomes:"] else self.font_goal
+                draw.text((current_x, text_y), word, fill=(80, 80, 80), font=font)
+                
+                # Avanzar la posición X
+                current_x += font.getbbox(word)[2]
+                if idx < len(words) - 1: # No añadir espacio después de la última palabra
+                    current_x += space_per_gap
+            
+            text_y += self.font_goal.getbbox("A")[3] + 4
+        
+        return text_y # Devuelve la posición Y después de la última línea de la meta
+
+    def _draw_connection(self, draw, x1, y1, x2, y2):
+        start_x = x1 + self.box_width
+        start_y = y1 + self.box_height / 2
+        end_y = y2 + self.box_height / 2
+        
+        mid_x = start_x + (self.step_x - self.box_width) / 2
+
+        # 1. Línea horizontal de salida
+        draw.line([(start_x, start_y), (mid_x, start_y)], fill=self.line_color, width=self.line_width)
+        # 2. Línea vertical
+        draw.line([(mid_x, start_y), (mid_x, end_y)], fill=self.line_color, width=self.line_width)
+        # 3. Línea horizontal de llegada
+        draw.line([(mid_x, end_y), (x2, end_y)], fill=self.line_color, width=self.line_width)
+
+        # Punta de la flecha
+        arrow_size = 8
+        draw.polygon([
+            (x2, end_y), 
+            (x2 - arrow_size * 1.5, end_y - arrow_size),
+            (x2 - arrow_size * 1.5, end_y + arrow_size)
+        ], fill=self.line_color)
+
+    def _draw_duration(self, draw, text, start_x, end_x, y_level):
+        dash_length = 10
+        gap_length = 5
+        vertical_line_height = 30
+
+        # Línea horizontal discontinua
+        current_x = start_x
+        while current_x < end_x:
+            end_dash = min(current_x + dash_length, end_x)
+            draw.line([(current_x, y_level), (end_dash, y_level)], fill=self.duration_line_color, width=self.line_width)
+            current_x += dash_length + gap_length
+
+        # Líneas verticales discontinuas
+        for x_pos in [start_x, end_x]:
+            current_y = y_level
+            while current_y > y_level - vertical_line_height:
+                end_dash = max(current_y - dash_length, y_level - vertical_line_height)
+                draw.line([(x_pos, current_y), (x_pos, end_dash)], fill=self.duration_line_color, width=self.line_width)
+                current_y -= dash_length + gap_length
+
+        # Texto del segmento
+        text_w = self.font_duration.getbbox(text)[2]
+        draw.text((start_x + (end_x - start_x - text_w) / 2, y_level + 8), text, fill=(80, 80, 80), font=self.font_duration)
+
+    def generate(self, segments: List[Segment], output_path: str):
+        all_boxes = [box for segment in segments for box in segment.boxes]
+        num_boxes = len(all_boxes)
+        
+        width = self.padding * 2 + (num_boxes - 1) * self.step_x + self.box_width
+        # Altura estimada, se recortará al final
+        height = self.padding * 2 + (num_boxes - 1) * self.step_y + self.box_height + 400
+
+        image = Image.new('RGB', (width, height), self.bg_color)
+        draw = ImageDraw.Draw(image)
+        
+        box_positions = []
+        max_y_after_goal = 0
+        
+        # Lógica de escalera ascendente
+        start_y = self.padding + (num_boxes - 1) * self.step_y
+
+        for i, box in enumerate(all_boxes):
+            current_y = start_y - i * self.step_y
+            y_level = current_y
+            current_x = self.padding + i * self.step_x
+            
+            y_after_goal = self._draw_box(draw, box, current_x, y_level)
+            max_y_after_goal = max(max_y_after_goal, y_after_goal)
+            box_positions.append({'x': current_x, 'y': y_level})
+
+        for i in range(num_boxes - 1):
+            pos1 = box_positions[i]
+            pos2 = box_positions[i+1]
+            self._draw_connection(draw, pos1['x'], pos1['y'], pos2['x'], pos2['y'])
+            
+        duration_y = max_y_after_goal + 40
+        timeline_start_x = box_positions[0]['x']
+        timeline_end_x = box_positions[-1]['x'] + self.goal_text_max_width
+        
+        dash_length = 10
+        gap_length = 5
+        vertical_line_height = 25
+
+        # 1. Dibujar la línea de tiempo horizontal discontinua
+        current_x = timeline_start_x
+        while current_x < timeline_end_x:
+            end_dash = min(current_x + dash_length, timeline_end_x)
+            draw.line([(current_x, duration_y), (end_dash, duration_y)], fill=self.duration_line_color, width=self.line_width)
+            current_x += dash_length + gap_length
+
+        # 2. Dibujar separadores verticales y texto
+        current_box_index = 0
+        separator_points = [timeline_start_x]
+
+        for segment in segments:
+            start_box_pos = box_positions[current_box_index]
+            segment_start_x = start_box_pos['x']
+
+            num_boxes_in_segment = len(segment.boxes)
+            end_box_index = current_box_index + num_boxes_in_segment - 1
+            end_box_pos = box_positions[end_box_index]
+            segment_end_x = end_box_pos['x'] + self.goal_text_max_width
+            separator_points.append(segment_end_x)
+
+            # Dibujar texto del segmento
+            duration_text = f"{segment.name} {segment.weeks} Weeks"
+            text_w = self.font_duration.getbbox(duration_text)[2]
+            draw.text(
+                (segment_start_x + (segment_end_x - segment_start_x - text_w) / 2, duration_y + 8),
+                duration_text, fill=(80, 80, 80), font=self.font_duration
+            )
+            current_box_index += num_boxes_in_segment
+        
+        # 3. Dibujar todas las líneas verticales discontinuas con altura progresiva
+        height_short = 25  # Altura para la primera línea
+        height_base_tall = 120 # Altura base para la segunda línea
+        increment_per_segment = 60 # Cuánto crece cada línea siguiente
+
+        for i, x_pos in enumerate(separator_points):
+            if i == 0:
+                height = height_short
+            else:
+                height = height_base_tall + ((i - 1) * increment_per_segment)
+            
+            current_y = duration_y
+            while current_y > duration_y - height:
+                end_dash = max(current_y - dash_length, duration_y - height)
+                draw.line([(x_pos, current_y), (x_pos, end_dash)], fill=self.duration_line_color, width=self.line_width)
+                current_y -= dash_length + gap_length
+
+        final_height = duration_y + 50
+        image = image.crop((0, 0, width, final_height))
+        
+        image.save(output_path)
+        print(f"Roadmap guardado como: {output_path}")
+
+
+def solicitar_datos_roadmap():
+    """Solicita al usuario los datos para generar el roadmap."""
+    print("\n=== GENERADOR DE ROADMAP ===")
+    print("Este programa creará un diagrama de roadmap en estilo cascada escalonada.")
+    
+    # Total de semanas
+    total_semanas = int(input("\nIngrese el total de semanas del proyecto: "))
+    
+    # Número de segmentos
+    num_segmentos = int(input("Ingrese el número de segmentos del roadmap: "))
+    
+    segmentos = []
+    semanas_asignadas = 0
+    
+    for i in range(1, num_segmentos + 1):
+        print(f"\n--- Segmento {i} ---")
+        nombre_segmento = input(f"Nombre del segmento {i}: ")
+        
+        # Validar semanas restantes
+        semanas_restantes = total_semanas - semanas_asignadas
+        if i == num_segmentos:  # El último segmento debe tomar todas las semanas restantes
+            semanas = semanas_restantes
+            print(f"Semanas asignadas al último segmento: {semanas}")
+        else:
+            max_semanas = total_semanas - semanas_asignadas - (num_segmentos - i)
+            if max_semanas <= 0:
+                print("Error: No hay suficientes semanas para distribuir.")
+                return None
+                
+            semanas = int(input(f"Semanas para este segmento (máx {max_semanas}): "))
+            while semanas <= 0 or semanas > max_semanas:
+                print(f"Por favor ingrese un valor entre 1 y {max_semanas}.")
+                semanas = int(input(f"Semanas para este segmento: "))
+        
+        semanas_asignadas += semanas
+        
+        # Solicitar número de cuadros para este segmento
+        num_cuadros = int(input(f"Número de cuadros para el segmento {i}: "))
+        while num_cuadros <= 0:
+            print("Debe haber al menos un cuadro por segmento.")
+            num_cuadros = int(input(f"Número de cuadros: "))
+        
+        # Definir colores para los cuadros (azul por defecto)
+        color_base = (65, 134, 205)
+        
+        # Solicitar datos de cada cuadro
+        cuadros = []
+        for j in range(1, num_cuadros + 1):
+            print(f"\nCuadro {j} del segmento {i}")
+            titulo = input(f"Título del cuadro {j}: ")
+            meta = input(f"Descripción de la meta: ")
+            
+            cuadros.append(Box(title=titulo, goal=meta, color=color_base))
+        
+        # Crear segmento y añadirlo a la lista
+        segmentos.append(Segment(name=nombre_segmento, weeks=semanas, boxes=cuadros))
+    
+    # Verificar que la suma de semanas sea correcta
+    if semanas_asignadas != total_semanas:
+        print(f"\nError: La suma de semanas ({semanas_asignadas}) no coincide con el total especificado ({total_semanas}).")
+        return None
+    
+    return segmentos
+
+
+def main():
+    """Función principal."""
+    segmentos = solicitar_datos_roadmap()
+    if not segmentos:
+        print("No se pudo crear el roadmap. Revise los datos e inténtelo de nuevo.")
+        return
+    
+    # Crear directorio para resultados si no existe
+    output_dir = "roadmaps"
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Generar roadmap
+    generator = RoadmapGenerator()
+    output_path = os.path.join(output_dir, "roadmap.png")
+    generator.generate(segmentos, output_path)
+    
+    print(f"\nRoadmap generado exitosamente: {os.path.abspath(output_path)}")
+
+
+if __name__ == "__main__":
+    main()

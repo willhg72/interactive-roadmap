@@ -1,0 +1,67 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+Ejemplo de uso del generador de roadmap
+--------------------------------------
+Este script crea un roadmap de ejemplo similar a la imagen de referencia.
+"""
+
+import os
+from roadmap_generator import RoadmapGenerator, Box, Segment
+
+import json
+from typing import List
+
+def load_segments_from_json(filepath: str) -> List[Segment]:
+    """Carga los datos del roadmap desde un archivo JSON."""
+    with open(filepath, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    
+    color_azul = (65, 134, 205)  # Color por defecto
+    
+    segments = []
+    for seg_data in data['segments']:
+        boxes = [
+            Box(
+                title=box_data['title'], 
+                goal=box_data['goal'], 
+                color=color_azul
+            ) for box_data in seg_data['boxes']
+        ]
+        segments.append(
+            Segment(
+                name=seg_data['name'], 
+                weeks=seg_data['weeks'], 
+                boxes=boxes
+            )
+        )
+    return segments
+
+def crear_roadmap_desde_json(json_path: str):
+    """Crea un roadmap a partir de un archivo de configuración JSON."""
+    # Cargar los datos desde el archivo JSON
+    try:
+        segmentos = load_segments_from_json(json_path)
+    except FileNotFoundError:
+        print(f"Error: El archivo '{json_path}' no fue encontrado.")
+        return
+    except json.JSONDecodeError:
+        print(f"Error: El archivo '{json_path}' no es un JSON válido.")
+        return
+    
+    # Crear directorio para resultados si no existe
+    output_dir = "roadmaps"
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Generar roadmap
+    generator = RoadmapGenerator()
+    output_filename = "roadmap.png"
+    output_path = os.path.join(output_dir, output_filename)
+    generator.generate(segmentos, output_path)
+    
+    print(f"Roadmap generado desde JSON: {os.path.abspath(output_path)}")
+    return output_path
+
+if __name__ == "__main__":
+    crear_roadmap_desde_json("roadmap.json")
