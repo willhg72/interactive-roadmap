@@ -66,11 +66,13 @@
 
 @layer utilities {
   .roadmap-box {
-    transition: opacity 0.2s ease;
+    transition: all 0.3s ease;
+    transform-origin: center;
   }
   
   .roadmap-box:hover {
     opacity: 0.9;
+    z-index: 10;
   }
   
   .canvas-container {
@@ -79,5 +81,16 @@
   
   .canvas-container:active {
     cursor: grabbing;
+  }
+  
+  /* Improve SVG text rendering */
+  svg text {
+    font-family: system-ui, -apple-system, sans-serif;
+    text-rendering: optimizeLegibility;
+  }
+  
+  /* Zoom effect styling */
+  .roadmap-box rect {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 }

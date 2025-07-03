@@ -36,11 +36,26 @@ export function createRoadmapSVG(svgElement: SVGSVGElement, data: RoadmapData) {
       .attr("fill", CANVAS_CONFIG.colors.boxFill)
       .attr("rx", CANVAS_CONFIG.cornerRadius)
       .style("cursor", "pointer")
+      .style("transition", "all 0.3s ease")
       .on("mouseenter", function(event) {
+        // Calculate center point for zoom
+        const centerX = currentX + CANVAS_CONFIG.boxWidth / 2;
+        const centerY = currentY + CANVAS_CONFIG.boxHeight / 2;
+        
+        // Zoom effect on the entire box group (3x zoom = 300%)
+        boxGroup.transition()
+          .duration(300)
+          .attr("transform", `translate(${centerX}, ${centerY}) scale(3) translate(${-centerX}, ${-centerY})`);
+        
         d3.select(this).style("opacity", 0.9);
         showTooltip(event, box);
       })
       .on("mouseleave", function() {
+        // Reset zoom
+        boxGroup.transition()
+          .duration(300)
+          .attr("transform", "scale(1) translate(0, 0)");
+        
         d3.select(this).style("opacity", 1);
         hideTooltip();
       });
@@ -86,22 +101,40 @@ export function createRoadmapSVG(svgElement: SVGSVGElement, data: RoadmapData) {
       }
     }
 
-    // Goal text
+    // Goal text with bold formatting for "Goal:" and "Outcomes:"
     const wrappedGoal = wrapText(box.goal, 35);
     const goalY = currentY + CANVAS_CONFIG.boxHeight + CANVAS_CONFIG.goalBoxYOffset + 15;
     
-    const goalText = boxGroup.append("text")
-      .attr("x", currentX)
-      .attr("y", goalY)
-      .attr("fill", CANVAS_CONFIG.colors.textGray)
-      .attr("font-size", "13")
-      .style("pointer-events", "none");
-
     wrappedGoal.forEach((line, i) => {
-      goalText.append("tspan")
+      const goalText = boxGroup.append("text")
         .attr("x", currentX)
-        .attr("dy", i === 0 ? 0 : "1.2em")
-        .text(line);
+        .attr("y", goalY + (i * 17))
+        .attr("fill", CANVAS_CONFIG.colors.textGray)
+        .attr("font-size", "13")
+        .style("pointer-events", "none");
+
+      // Check if line contains "Goal:" or "Outcomes:" and format accordingly
+      if (line.includes("Goal:") || line.includes("Outcomes:")) {
+        const parts = line.split(/(Goal:|Outcomes:)/);
+        let xOffset = 0;
+        
+        parts.forEach(part => {
+          if (part === "Goal:" || part === "Outcomes:") {
+            const boldSpan = goalText.append("tspan")
+              .attr("x", currentX + xOffset)
+              .attr("font-weight", "bold")
+              .text(part);
+            xOffset += part.length * 8; // Approximate character width
+          } else if (part.trim()) {
+            const normalSpan = goalText.append("tspan")
+              .attr("x", currentX + xOffset)
+              .text(part);
+            xOffset += part.length * 6.5; // Approximate character width
+          }
+        });
+      } else {
+        goalText.text(line);
+      }
     });
 
     maxYAfterGoal = Math.max(maxYAfterGoal, goalY + wrappedGoal.length * 17);
