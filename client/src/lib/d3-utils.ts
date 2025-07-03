@@ -12,25 +12,29 @@ function showModalZoom(boxGroup: any, box: any, originalX: number, originalY: nu
   currentZoomedBox = box;
   currentZoomedGroup = boxGroup;
   
-  // Get viewport dimensions to center the zoom
+  // Get SVG dimensions and calculate center
   const svgElement = boxGroup.node().ownerSVGElement;
-  const svgRect = svgElement.getBoundingClientRect();
+  const svgSelection = d3.select(svgElement);
   
-  // Use viewport dimensions for true centering
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
+  // Get the viewBox or use the SVG dimensions
+  const viewBox = svgSelection.attr("viewBox");
+  let svgWidth, svgHeight;
   
-  // Calculate center position relative to viewport
-  const centerX = viewportWidth / 2;
-  const centerY = viewportHeight / 2;
+  if (viewBox) {
+    const [x, y, width, height] = viewBox.split(' ').map(Number);
+    svgWidth = width;
+    svgHeight = height;
+  } else {
+    svgWidth = +svgSelection.attr("width") || 1200;
+    svgHeight = +svgSelection.attr("height") || 800;
+  }
   
-  // Convert viewport coordinates to SVG coordinates
-  const svgCenterX = centerX - svgRect.left;
-  const svgCenterY = centerY - svgRect.top;
+  // Calculate center position within SVG coordinates
+  const svgCenterX = svgWidth / 2;
+  const svgCenterY = svgHeight / 2;
   
   // Create overlay background
-  const svg = d3.select(svgElement);
-  const overlay = svg.append("rect")
+  const overlay = svgSelection.append("rect")
     .attr("class", "zoom-overlay")
     .attr("x", 0)
     .attr("y", 0)
@@ -41,7 +45,7 @@ function showModalZoom(boxGroup: any, box: any, originalX: number, originalY: nu
     .on("click", hideModalZoom);
   
   // Clone the box group for the zoom effect
-  const clonedGroup = svg.append("g")
+  const clonedGroup = svgSelection.append("g")
     .attr("class", "zoomed-box-group")
     .style("pointer-events", "none");
   
@@ -174,8 +178,8 @@ function hideModalZoom() {
 }
 
 export function createRoadmapSVG(svgElement: SVGSVGElement, data: RoadmapData) {
-  const svg = d3.select(svgElement);
-  svg.selectAll("*").remove(); // Clear existing content
+  const svgCanvas = d3.select(svgElement);
+  svgCanvas.selectAll("*").remove(); // Clear existing content
   
   // Add keyboard event listener for Escape key
   d3.select(document).on("keydown", function(event) {
@@ -187,7 +191,7 @@ export function createRoadmapSVG(svgElement: SVGSVGElement, data: RoadmapData) {
   const { width, height, numBoxes } = calculateCanvasDimensions(data);
   const allBoxes = data.segments.flatMap(segment => segment.boxes);
   
-  svg.attr("width", width).attr("height", height).attr("viewBox", `0 0 ${width} ${height}`);
+  svgCanvas.attr("width", width).attr("height", height).attr("viewBox", `0 0 ${width} ${height}`);
 
   const startY = CANVAS_CONFIG.padding + (numBoxes - 1) * CANVAS_CONFIG.stepY;
   const boxPositions: Array<{ x: number; y: number }> = [];
@@ -201,7 +205,7 @@ export function createRoadmapSVG(svgElement: SVGSVGElement, data: RoadmapData) {
     boxPositions.push({ x: currentX, y: currentY });
     
     // Create box group
-    const boxGroup = svg.append("g")
+    const boxGroup = svgCanvas.append("g")
       .attr("class", "roadmap-box")
       .attr("data-index", i);
 
@@ -220,12 +224,26 @@ export function createRoadmapSVG(svgElement: SVGSVGElement, data: RoadmapData) {
         showModalZoom(boxGroup, box, currentX, currentY);
       })
       .on("mouseenter", function() {
-        // Add hover effect without opening modal
-        d3.select(this).style("transform", "scale(1.05)");
+        // Add hover effect without opening modal - scale and darken color
+        d3.select(this)
+          .transition()
+          .duration(200)
+          .attr("width", CANVAS_CONFIG.boxWidth * 1.05)
+          .attr("height", CANVAS_CONFIG.boxHeight * 1.05)
+          .attr("x", currentX - (CANVAS_CONFIG.boxWidth * 0.025))
+          .attr("y", currentY - (CANVAS_CONFIG.boxHeight * 0.025))
+          .attr("fill", "#2563eb"); // Darker blue
       })
       .on("mouseleave", function() {
         // Remove hover effect
-        d3.select(this).style("transform", "scale(1)");
+        d3.select(this)
+          .transition()
+          .duration(200)
+          .attr("width", CANVAS_CONFIG.boxWidth)
+          .attr("height", CANVAS_CONFIG.boxHeight)
+          .attr("x", currentX)
+          .attr("y", currentY)
+          .attr("fill", CANVAS_CONFIG.colors.boxFill); // Original color
       });
 
     // Title text
@@ -318,7 +336,7 @@ export function createRoadmapSVG(svgElement: SVGSVGElement, data: RoadmapData) {
     const endY = pos2.y + CANVAS_CONFIG.boxHeight / 2;
     const midX = startX + (CANVAS_CONFIG.stepX - CANVAS_CONFIG.boxWidth) / 2;
     
-    const connectionGroup = svg.append("g");
+    const connectionGroup = svgCanvas.append("g");
     
     // Connection path
     const pathData = `M ${startX} ${startY} L ${midX} ${startY} L ${midX} ${endY} L ${pos2.x} ${endY}`;
@@ -337,7 +355,7 @@ export function createRoadmapSVG(svgElement: SVGSVGElement, data: RoadmapData) {
   }
 
   // Draw timeline
-  drawTimeline(svg, data, boxPositions, maxYAfterGoal + 40);
+  drawTimeline(svgCanvas, data, boxPositions, maxYAfterGoal + 40);
 }
 
 function drawTimeline(svg: d3.Selection<SVGSVGElement, unknown, null, undefined>, data: RoadmapData, boxPositions: Array<{ x: number; y: number }>, timelineY: number) {
