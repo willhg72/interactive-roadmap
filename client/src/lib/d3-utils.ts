@@ -12,15 +12,21 @@ function showModalZoom(boxGroup: any, box: any, originalX: number, originalY: nu
   currentZoomedBox = box;
   currentZoomedGroup = boxGroup;
   
-  // Get SVG dimensions to center the zoom
+  // Get viewport dimensions to center the zoom
   const svgElement = boxGroup.node().ownerSVGElement;
   const svgRect = svgElement.getBoundingClientRect();
-  const svgWidth = svgRect.width;
-  const svgHeight = svgRect.height;
   
-  // Calculate center position
-  const centerX = svgWidth / 2;
-  const centerY = svgHeight / 2;
+  // Use viewport dimensions for true centering
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  
+  // Calculate center position relative to viewport
+  const centerX = viewportWidth / 2;
+  const centerY = viewportHeight / 2;
+  
+  // Convert viewport coordinates to SVG coordinates
+  const svgCenterX = centerX - svgRect.left;
+  const svgCenterY = centerY - svgRect.top;
   
   // Create overlay background
   const svg = d3.select(svgElement);
@@ -41,8 +47,8 @@ function showModalZoom(boxGroup: any, box: any, originalX: number, originalY: nu
   
   // Clone the box elements
   const boxRect = clonedGroup.append("rect")
-    .attr("x", centerX - CANVAS_CONFIG.boxWidth * 1.5)
-    .attr("y", centerY - CANVAS_CONFIG.boxHeight * 1.5)
+    .attr("x", svgCenterX - CANVAS_CONFIG.boxWidth * 1.5)
+    .attr("y", svgCenterY - CANVAS_CONFIG.boxHeight * 1.5)
     .attr("width", CANVAS_CONFIG.boxWidth * 3)
     .attr("height", CANVAS_CONFIG.boxHeight * 3)
     .attr("fill", CANVAS_CONFIG.colors.boxFill)
@@ -50,11 +56,11 @@ function showModalZoom(boxGroup: any, box: any, originalX: number, originalY: nu
   
   // Clone and scale the title text
   const wrappedTitle = wrapText(box.title, 25);
-  const titleY = centerY;
+  const titleY = svgCenterY;
   
   if (wrappedTitle.length === 1) {
     clonedGroup.append("text")
-      .attr("x", centerX)
+      .attr("x", svgCenterX)
       .attr("y", titleY)
       .attr("text-anchor", "middle")
       .attr("dominant-baseline", "middle")
@@ -64,7 +70,7 @@ function showModalZoom(boxGroup: any, box: any, originalX: number, originalY: nu
       .text(wrappedTitle[0]);
   } else {
     clonedGroup.append("text")
-      .attr("x", centerX)
+      .attr("x", svgCenterX)
       .attr("y", titleY - 24)
       .attr("text-anchor", "middle")
       .attr("dominant-baseline", "middle")
@@ -75,7 +81,7 @@ function showModalZoom(boxGroup: any, box: any, originalX: number, originalY: nu
       
     if (wrappedTitle[1]) {
       clonedGroup.append("text")
-        .attr("x", centerX)
+        .attr("x", svgCenterX)
         .attr("y", titleY + 24)
         .attr("text-anchor", "middle")
         .attr("dominant-baseline", "middle")
@@ -90,8 +96,8 @@ function showModalZoom(boxGroup: any, box: any, originalX: number, originalY: nu
   const panelWidth = CANVAS_CONFIG.boxWidth * 3.6;
   const panelHeight = 280;
   const textPanel = clonedGroup.append("rect")
-    .attr("x", centerX - panelWidth / 2)
-    .attr("y", centerY + CANVAS_CONFIG.boxHeight * 1.5 + 30)
+    .attr("x", svgCenterX - panelWidth / 2)
+    .attr("y", svgCenterY + CANVAS_CONFIG.boxHeight * 1.5 + 30)
     .attr("width", panelWidth)
     .attr("height", panelHeight)
     .attr("fill", "rgba(0, 0, 0, 0.8)")
@@ -101,8 +107,8 @@ function showModalZoom(boxGroup: any, box: any, originalX: number, originalY: nu
 
   // Clone and scale the goal text with better visibility
   const wrappedGoal = wrapText(box.goal, 50);
-  const goalY = centerY + CANVAS_CONFIG.boxHeight * 1.5 + 80;
-  const textStartX = centerX - panelWidth / 2 + 20; // Add padding from panel edge
+  const goalY = svgCenterY + CANVAS_CONFIG.boxHeight * 1.5 + 80;
+  const textStartX = svgCenterX - panelWidth / 2 + 20; // Add padding from panel edge
   
   wrappedGoal.forEach((line, i) => {
     const goalText = clonedGroup.append("text")
@@ -133,12 +139,12 @@ function showModalZoom(boxGroup: any, box: any, originalX: number, originalY: nu
   
   // Add close instruction text
   clonedGroup.append("text")
-    .attr("x", centerX)
-    .attr("y", centerY + CANVAS_CONFIG.boxHeight * 1.5 + 370)
+    .attr("x", svgCenterX)
+    .attr("y", svgCenterY + CANVAS_CONFIG.boxHeight * 1.5 + 370)
     .attr("text-anchor", "middle")
     .attr("fill", "rgba(255, 255, 255, 0.7)")
     .attr("font-size", "24")
-    .text("Presiona Escape para cerrar");
+    .text("Haz clic o presiona Escape para cerrar");
 
   // Add animation
   overlay.style("opacity", 0).transition().duration(300).style("opacity", 1);
@@ -209,12 +215,17 @@ export function createRoadmapSVG(svgElement: SVGSVGElement, data: RoadmapData) {
       .attr("rx", CANVAS_CONFIG.cornerRadius)
       .style("cursor", "pointer")
       .style("transition", "all 0.3s ease")
-      .on("mouseenter", function(event) {
-        // Create modal-style zoom effect
+      .on("click", function(event) {
+        // Create modal-style zoom effect on click
         showModalZoom(boxGroup, box, currentX, currentY);
       })
+      .on("mouseenter", function() {
+        // Add hover effect without opening modal
+        d3.select(this).style("transform", "scale(1.05)");
+      })
       .on("mouseleave", function() {
-        // Don't hide on mouse leave anymore - only with Escape key
+        // Remove hover effect
+        d3.select(this).style("transform", "scale(1)");
       });
 
     // Title text
