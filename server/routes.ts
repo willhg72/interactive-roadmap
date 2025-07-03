@@ -20,7 +20,8 @@ export function registerRoutes(app: Express): void {
           }))
         });
       } else {
-        res.status(500).json({ valid: false, message: "Internal server error" });
+        const errorDetails = error instanceof Error ? { message: error.message, stack: error.stack } : { message: String(error) };
+        res.status(500).json({ valid: false, message: "Internal server error", error: errorDetails });
       }
     }
   });

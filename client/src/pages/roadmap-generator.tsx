@@ -29,17 +29,35 @@ export default function RoadmapGenerator() {
           description: "Roadmap loaded successfully!",
         });
       } else {
+        const description = result.error?.message
+          ? `Validation failed: ${result.error.message}`
+          : "Please check your JSON structure and try again.";
         toast({
           title: "Invalid JSON",
-          description: "Please check your JSON structure and try again.",
+          description: description,
           variant: "destructive",
         });
+        if (result.error) {
+          console.error("Detailed validation error:", result.error);
+        }
       }
     },
-    onError: () => {
+    onError: async (error: any) => {
+      let description = "Failed to validate roadmap data.";
+      try {
+        const errorData = await error.response?.json();
+        if (errorData && errorData.error) {
+          description = `Backend Error: ${errorData.error.message}. Check the console for more details.`;
+          console.error("Detailed backend error:", errorData.error);
+        } else {
+          console.error("Unknown error:", error);
+        }
+      } catch (e) {
+        console.error("Failed to parse error response. Original error:", error);
+      }
       toast({
         title: "Error",
-        description: "Failed to validate roadmap data.",
+        description,
         variant: "destructive",
       });
     },
