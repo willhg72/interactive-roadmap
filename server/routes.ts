@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { roadmapDataSchema, insertRoadmapSchema } from "@shared/schema";
 import { ZodError } from "zod";
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export function registerRoutes(app: Express): void {
   // Validate and parse roadmap JSON
   app.post("/api/roadmap/validate", async (req, res) => {
     try {
@@ -78,6 +78,5 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const httpServer = createServer(app);
-  return httpServer;
+
 }
