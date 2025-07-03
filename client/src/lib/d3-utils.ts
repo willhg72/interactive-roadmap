@@ -2,9 +2,163 @@ import * as d3 from "d3";
 import type { RoadmapData } from "@shared/schema";
 import { CANVAS_CONFIG, calculateCanvasDimensions, wrapText } from "./roadmap-utils";
 
+let currentZoomedBox: any = null;
+let currentZoomedGroup: any = null;
+
+function showModalZoom(boxGroup: any, box: any, originalX: number, originalY: number) {
+  // Don't create multiple zoom effects
+  if (currentZoomedBox) return;
+  
+  currentZoomedBox = box;
+  currentZoomedGroup = boxGroup;
+  
+  // Get SVG dimensions to center the zoom
+  const svgElement = boxGroup.node().ownerSVGElement;
+  const svgRect = svgElement.getBoundingClientRect();
+  const svgWidth = svgRect.width;
+  const svgHeight = svgRect.height;
+  
+  // Calculate center position
+  const centerX = svgWidth / 2;
+  const centerY = svgHeight / 2;
+  
+  // Create overlay background
+  const svg = d3.select(svgElement);
+  const overlay = svg.append("rect")
+    .attr("class", "zoom-overlay")
+    .attr("x", 0)
+    .attr("y", 0)
+    .attr("width", "100%")
+    .attr("height", "100%")
+    .attr("fill", "rgba(0, 0, 0, 0.7)")
+    .style("cursor", "pointer")
+    .on("click", hideModalZoom);
+  
+  // Clone the box group for the zoom effect
+  const clonedGroup = svg.append("g")
+    .attr("class", "zoomed-box-group")
+    .style("pointer-events", "none");
+  
+  // Clone the box elements
+  const boxRect = clonedGroup.append("rect")
+    .attr("x", centerX - CANVAS_CONFIG.boxWidth * 1.5)
+    .attr("y", centerY - CANVAS_CONFIG.boxHeight * 1.5)
+    .attr("width", CANVAS_CONFIG.boxWidth * 3)
+    .attr("height", CANVAS_CONFIG.boxHeight * 3)
+    .attr("fill", CANVAS_CONFIG.colors.boxFill)
+    .attr("rx", CANVAS_CONFIG.cornerRadius * 3);
+  
+  // Clone and scale the title text
+  const wrappedTitle = wrapText(box.title, 25);
+  const titleY = centerY;
+  
+  if (wrappedTitle.length === 1) {
+    clonedGroup.append("text")
+      .attr("x", centerX)
+      .attr("y", titleY)
+      .attr("text-anchor", "middle")
+      .attr("dominant-baseline", "middle")
+      .attr("fill", CANVAS_CONFIG.colors.textWhite)
+      .attr("font-size", "42")
+      .attr("font-weight", "600")
+      .text(wrappedTitle[0]);
+  } else {
+    clonedGroup.append("text")
+      .attr("x", centerX)
+      .attr("y", titleY - 24)
+      .attr("text-anchor", "middle")
+      .attr("dominant-baseline", "middle")
+      .attr("fill", CANVAS_CONFIG.colors.textWhite)
+      .attr("font-size", "42")
+      .attr("font-weight", "600")
+      .text(wrappedTitle[0]);
+      
+    if (wrappedTitle[1]) {
+      clonedGroup.append("text")
+        .attr("x", centerX)
+        .attr("y", titleY + 24)
+        .attr("text-anchor", "middle")
+        .attr("dominant-baseline", "middle")
+        .attr("fill", CANVAS_CONFIG.colors.textWhite)
+        .attr("font-size", "42")
+        .attr("font-weight", "600")
+        .text(wrappedTitle[1]);
+    }
+  }
+  
+  // Clone and scale the goal text
+  const wrappedGoal = wrapText(box.goal, 50);
+  const goalY = centerY + CANVAS_CONFIG.boxHeight * 1.5 + 60;
+  
+  wrappedGoal.forEach((line, i) => {
+    const goalText = clonedGroup.append("text")
+      .attr("x", centerX - CANVAS_CONFIG.boxWidth * 1.5)
+      .attr("y", goalY + (i * 51))
+      .attr("fill", CANVAS_CONFIG.colors.textGray)
+      .attr("font-size", "39")
+      .style("pointer-events", "none");
+
+    // Check if line contains "Goal:" or "Outcomes:" and format accordingly
+    if (line.includes("Goal:") || line.includes("Outcomes:")) {
+      const parts = line.split(/(Goal:|Outcomes:)/);
+      let xOffset = 0;
+      
+      parts.forEach(part => {
+        if (part === "Goal:" || part === "Outcomes:") {
+          const boldSpan = goalText.append("tspan")
+            .attr("x", centerX - CANVAS_CONFIG.boxWidth * 1.5 + xOffset)
+            .attr("font-weight", "bold")
+            .text(part);
+          xOffset += part.length * 24;
+        } else if (part.trim()) {
+          const normalSpan = goalText.append("tspan")
+            .attr("x", centerX - CANVAS_CONFIG.boxWidth * 1.5 + xOffset)
+            .text(part);
+          xOffset += part.length * 19.5;
+        }
+      });
+    } else {
+      goalText.text(line);
+    }
+  });
+  
+  // Add animation
+  overlay.style("opacity", 0).transition().duration(300).style("opacity", 1);
+  clonedGroup.style("opacity", 0).transition().duration(300).style("opacity", 1);
+}
+
+function hideModalZoom() {
+  if (!currentZoomedBox) return;
+  
+  const svg = d3.select(currentZoomedGroup.node().ownerSVGElement);
+  
+  // Remove overlay and zoomed elements with animation
+  svg.selectAll(".zoom-overlay")
+    .transition()
+    .duration(300)
+    .style("opacity", 0)
+    .remove();
+    
+  svg.selectAll(".zoomed-box-group")
+    .transition()
+    .duration(300)
+    .style("opacity", 0)
+    .remove();
+  
+  currentZoomedBox = null;
+  currentZoomedGroup = null;
+}
+
 export function createRoadmapSVG(svgElement: SVGSVGElement, data: RoadmapData) {
   const svg = d3.select(svgElement);
   svg.selectAll("*").remove(); // Clear existing content
+  
+  // Add keyboard event listener for Escape key
+  d3.select(document).on("keydown", function(event) {
+    if (event.key === "Escape" && currentZoomedBox) {
+      hideModalZoom();
+    }
+  });
 
   const { width, height, numBoxes } = calculateCanvasDimensions(data);
   const allBoxes = data.segments.flatMap(segment => segment.boxes);
@@ -38,26 +192,11 @@ export function createRoadmapSVG(svgElement: SVGSVGElement, data: RoadmapData) {
       .style("cursor", "pointer")
       .style("transition", "all 0.3s ease")
       .on("mouseenter", function(event) {
-        // Calculate center point for zoom
-        const centerX = currentX + CANVAS_CONFIG.boxWidth / 2;
-        const centerY = currentY + CANVAS_CONFIG.boxHeight / 2;
-        
-        // Zoom effect on the entire box group (3x zoom = 300%)
-        boxGroup.transition()
-          .duration(300)
-          .attr("transform", `translate(${centerX}, ${centerY}) scale(3) translate(${-centerX}, ${-centerY})`);
-        
-        d3.select(this).style("opacity", 0.9);
-        showTooltip(event, box);
+        // Create modal-style zoom effect
+        showModalZoom(boxGroup, box, currentX, currentY);
       })
       .on("mouseleave", function() {
-        // Reset zoom
-        boxGroup.transition()
-          .duration(300)
-          .attr("transform", "scale(1) translate(0, 0)");
-        
-        d3.select(this).style("opacity", 1);
-        hideTooltip();
+        // Don't hide on mouse leave anymore - only with Escape key
       });
 
     // Title text
