@@ -1,4 +1,4 @@
-import { users, roadmaps, type User, type InsertUser, type Roadmap, type InsertRoadmap } from "@shared/schema";
+import { users, roadmaps, type User, type InsertUser, type Roadmap, type InsertRoadmap } from "../shared/schema";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
