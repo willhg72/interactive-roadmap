@@ -86,16 +86,27 @@ function showModalZoom(boxGroup: any, box: any, originalX: number, originalY: nu
     }
   }
   
-  // Clone and scale the goal text
-  const wrappedGoal = wrapText(box.goal, 50);
-  const goalY = centerY + CANVAS_CONFIG.boxHeight * 1.5 + 60;
+  // Create a text background panel for better readability
+  const textPanel = clonedGroup.append("rect")
+    .attr("x", centerX - CANVAS_CONFIG.boxWidth * 1.8)
+    .attr("y", centerY + CANVAS_CONFIG.boxHeight * 1.5 + 30)
+    .attr("width", CANVAS_CONFIG.boxWidth * 3.6)
+    .attr("height", 300)
+    .attr("fill", "rgba(0, 0, 0, 0.8)")
+    .attr("rx", 8)
+    .attr("stroke", "rgba(255, 255, 255, 0.2)")
+    .attr("stroke-width", 1);
+
+  // Clone and scale the goal text with better visibility
+  const wrappedGoal = wrapText(box.goal, 60);
+  const goalY = centerY + CANVAS_CONFIG.boxHeight * 1.5 + 70;
   
   wrappedGoal.forEach((line, i) => {
     const goalText = clonedGroup.append("text")
       .attr("x", centerX - CANVAS_CONFIG.boxWidth * 1.5)
-      .attr("y", goalY + (i * 51))
-      .attr("fill", CANVAS_CONFIG.colors.textGray)
-      .attr("font-size", "39")
+      .attr("y", goalY + (i * 45))
+      .attr("fill", "white")
+      .attr("font-size", "32")
       .style("pointer-events", "none");
 
     // Check if line contains "Goal:" or "Outcomes:" and format accordingly
@@ -109,12 +120,12 @@ function showModalZoom(boxGroup: any, box: any, originalX: number, originalY: nu
             .attr("x", centerX - CANVAS_CONFIG.boxWidth * 1.5 + xOffset)
             .attr("font-weight", "bold")
             .text(part);
-          xOffset += part.length * 24;
+          xOffset += part.length * 20;
         } else if (part.trim()) {
           const normalSpan = goalText.append("tspan")
             .attr("x", centerX - CANVAS_CONFIG.boxWidth * 1.5 + xOffset)
             .text(part);
-          xOffset += part.length * 19.5;
+          xOffset += part.length * 16;
         }
       });
     } else {
@@ -122,6 +133,15 @@ function showModalZoom(boxGroup: any, box: any, originalX: number, originalY: nu
     }
   });
   
+  // Add close instruction text
+  clonedGroup.append("text")
+    .attr("x", centerX)
+    .attr("y", centerY + CANVAS_CONFIG.boxHeight * 1.5 + 370)
+    .attr("text-anchor", "middle")
+    .attr("fill", "rgba(255, 255, 255, 0.7)")
+    .attr("font-size", "24")
+    .text("Presiona Escape para cerrar");
+
   // Add animation
   overlay.style("opacity", 0).transition().duration(300).style("opacity", 1);
   clonedGroup.style("opacity", 0).transition().duration(300).style("opacity", 1);
