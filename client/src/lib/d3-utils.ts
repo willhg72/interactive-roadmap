@@ -49,14 +49,15 @@ function showModalZoom(boxGroup: any, box: any, originalX: number, originalY: nu
     .attr("class", "zoomed-box-group")
     .style("pointer-events", "none");
   
-  // Clone the box elements
+  // Clone the box elements - 40% larger for presentations
+  const modalScale = 4.2; // Increased from 3 to 4.2 (40% larger)
   const boxRect = clonedGroup.append("rect")
-    .attr("x", svgCenterX - CANVAS_CONFIG.boxWidth * 1.5)
-    .attr("y", svgCenterY - CANVAS_CONFIG.boxHeight * 1.5)
-    .attr("width", CANVAS_CONFIG.boxWidth * 3)
-    .attr("height", CANVAS_CONFIG.boxHeight * 3)
+    .attr("x", svgCenterX - CANVAS_CONFIG.boxWidth * (modalScale / 2))
+    .attr("y", svgCenterY - CANVAS_CONFIG.boxHeight * (modalScale / 2))
+    .attr("width", CANVAS_CONFIG.boxWidth * modalScale)
+    .attr("height", CANVAS_CONFIG.boxHeight * modalScale)
     .attr("fill", CANVAS_CONFIG.colors.boxFill)
-    .attr("rx", CANVAS_CONFIG.cornerRadius * 3);
+    .attr("rx", CANVAS_CONFIG.cornerRadius * modalScale);
   
   // Clone and scale the title text
   const wrappedTitle = wrapText(box.title, 25);
@@ -69,57 +70,57 @@ function showModalZoom(boxGroup: any, box: any, originalX: number, originalY: nu
       .attr("text-anchor", "middle")
       .attr("dominant-baseline", "middle")
       .attr("fill", CANVAS_CONFIG.colors.textWhite)
-      .attr("font-size", "42")
+      .attr("font-size", "58") // Increased from 42 to 58 (40% larger)
       .attr("font-weight", "600")
       .text(wrappedTitle[0]);
   } else {
     clonedGroup.append("text")
       .attr("x", svgCenterX)
-      .attr("y", titleY - 24)
+      .attr("y", titleY - 32) // Increased spacing from 24 to 32
       .attr("text-anchor", "middle")
       .attr("dominant-baseline", "middle")
       .attr("fill", CANVAS_CONFIG.colors.textWhite)
-      .attr("font-size", "42")
+      .attr("font-size", "58") // Increased from 42 to 58 (40% larger)
       .attr("font-weight", "600")
       .text(wrappedTitle[0]);
       
     if (wrappedTitle[1]) {
       clonedGroup.append("text")
         .attr("x", svgCenterX)
-        .attr("y", titleY + 24)
+        .attr("y", titleY + 32) // Increased spacing from 24 to 32
         .attr("text-anchor", "middle")
         .attr("dominant-baseline", "middle")
         .attr("fill", CANVAS_CONFIG.colors.textWhite)
-        .attr("font-size", "42")
+        .attr("font-size", "58") // Increased from 42 to 58 (40% larger)
         .attr("font-weight", "600")
         .text(wrappedTitle[1]);
     }
   }
   
-  // Create a text background panel for better readability
-  const panelWidth = CANVAS_CONFIG.boxWidth * 3.6;
-  const panelHeight = 280;
+  // Create a text background panel for better readability - 40% larger
+  const panelWidth = CANVAS_CONFIG.boxWidth * 5.0; // Increased from 3.6 to 5.0
+  const panelHeight = 392; // Increased from 280 to 392 (40% larger)
   const textPanel = clonedGroup.append("rect")
     .attr("x", svgCenterX - panelWidth / 2)
-    .attr("y", svgCenterY + CANVAS_CONFIG.boxHeight * 1.5 + 30)
+    .attr("y", svgCenterY + CANVAS_CONFIG.boxHeight * (modalScale / 2) + 42) // Adjusted positioning
     .attr("width", panelWidth)
     .attr("height", panelHeight)
     .attr("fill", "rgba(0, 0, 0, 0.8)")
-    .attr("rx", 8)
+    .attr("rx", 11) // Increased from 8 to 11
     .attr("stroke", "rgba(255, 255, 255, 0.2)")
     .attr("stroke-width", 1);
 
-  // Clone and scale the goal text with better visibility
+  // Clone and scale the goal text with better visibility - 40% larger
   const wrappedGoal = wrapText(box.goal, 50);
-  const goalY = svgCenterY + CANVAS_CONFIG.boxHeight * 1.5 + 80;
-  const textStartX = svgCenterX - panelWidth / 2 + 20; // Add padding from panel edge
+  const goalY = svgCenterY + CANVAS_CONFIG.boxHeight * (modalScale / 2) + 98; // Adjusted positioning
+  const textStartX = svgCenterX - panelWidth / 2 + 28; // Increased padding from 20 to 28
   
   wrappedGoal.forEach((line, i) => {
     const goalText = clonedGroup.append("text")
       .attr("x", textStartX)
-      .attr("y", goalY + (i * 40))
+      .attr("y", goalY + (i * 56)) // Increased from 40 to 56 (40% larger line spacing)
       .attr("fill", "white")
-      .attr("font-size", "28")
+      .attr("font-size", "39") // Increased from 28 to 39 (40% larger)
       .style("pointer-events", "none");
 
     // Check if line contains "Goal:" or "Outcomes:" and format accordingly
@@ -141,13 +142,13 @@ function showModalZoom(boxGroup: any, box: any, originalX: number, originalY: nu
     }
   });
   
-  // Add close instruction text
+  // Add close instruction text - 40% larger
   clonedGroup.append("text")
     .attr("x", svgCenterX)
-    .attr("y", svgCenterY + CANVAS_CONFIG.boxHeight * 1.5 + 370)
+    .attr("y", svgCenterY + CANVAS_CONFIG.boxHeight * (modalScale / 2) + 518) // Adjusted positioning
     .attr("text-anchor", "middle")
     .attr("fill", "rgba(255, 255, 255, 0.7)")
-    .attr("font-size", "24")
+    .attr("font-size", "34") // Increased from 24 to 34 (40% larger)
     .text("Haz clic o presiona Escape para cerrar");
 
   // Add animation
@@ -232,7 +233,7 @@ export function createRoadmapSVG(svgElement: SVGSVGElement, data: RoadmapData) {
           .attr("height", CANVAS_CONFIG.boxHeight * 1.05)
           .attr("x", currentX - (CANVAS_CONFIG.boxWidth * 0.025))
           .attr("y", currentY - (CANVAS_CONFIG.boxHeight * 0.025))
-          .attr("fill", "#2563eb"); // Darker blue
+          .attr("fill", "#1e3a8a"); // Navy blue
       })
       .on("mouseleave", function() {
         // Remove hover effect
