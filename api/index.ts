@@ -9,11 +9,9 @@ const server = createServer(app);
 // --- Middleware ---
 app.use(cors());
 
-// Body parsing middleware (only for development, Vercel handles it in production)
-if (process.env.NODE_ENV === "development") {
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
-}
+// Body parsing middleware for all environments
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Logging middleware
 app.use((req, _res, next) => {
