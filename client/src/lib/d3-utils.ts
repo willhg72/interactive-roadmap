@@ -288,40 +288,33 @@ export function createRoadmapSVG(svgElement: SVGSVGElement, data: RoadmapData) {
       }
     }
 
-    // Goal text with bold formatting for "Goal:" and "Outcomes:"
-    const wrappedGoal = wrapText(box.goal, 35);
+    // --- SVG Text Rendering for Goal ---
     const goalY = currentY + CANVAS_CONFIG.boxHeight + CANVAS_CONFIG.goalBoxYOffset + 15;
-    
-    wrappedGoal.forEach((line, i) => {
-      const goalText = boxGroup.append("text")
+    const goalTextNode = boxGroup.append("text")
         .attr("x", currentX)
-        .attr("y", goalY + (i * 17))
+        .attr("y", goalY)
+        .attr("font-size", "12px")
         .attr("fill", CANVAS_CONFIG.colors.textGray)
-        .attr("font-size", "13")
         .style("pointer-events", "none");
 
-      // Check if line contains "Goal:" or "Outcomes:" and format accordingly
-      if (line.includes("Goal:") || line.includes("Outcomes:")) {
-        const parts = line.split(/(Goal:|Outcomes:)/);
-        let xOffset = 0;
-        
-        parts.forEach(part => {
-          if (part === "Goal:" || part === "Outcomes:") {
-            const boldSpan = goalText.append("tspan")
-              .attr("x", currentX + xOffset)
-              .attr("font-weight", "bold")
-              .text(part);
-            xOffset += part.length * 8; // Approximate character width
-          } else if (part.trim()) {
-            const normalSpan = goalText.append("tspan")
-              .attr("x", currentX + xOffset)
-              .text(part);
-            xOffset += part.length * 6.5; // Approximate character width
-          }
-        });
-      } else {
-        goalText.text(line);
-      }
+    const wrappedGoal = wrapText(box.goal, 35);
+
+    wrappedGoal.forEach((line, index) => {
+        const tspan = goalTextNode.append("tspan")
+            .attr("x", currentX)
+            .attr("dy", index === 0 ? 0 : "1.2em"); // Use dy for line spacing
+
+        if (index === 0) {
+            tspan.append("tspan")
+                .attr("font-weight", "bold")
+                .attr("fill", CANVAS_CONFIG.colors.boxFill)
+                .text("Goal: ");
+            
+            tspan.append("tspan")
+                .text(line);
+        } else {
+            tspan.text(line);
+        }
     });
 
     maxYAfterGoal = Math.max(maxYAfterGoal, goalY + wrappedGoal.length * 17);

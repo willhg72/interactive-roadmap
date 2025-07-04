@@ -7,6 +7,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { FileUpload } from "@/components/file-upload";
 import { RoadmapCanvas } from "@/components/roadmap-canvas";
 import { Route, Download, Upload, FileText } from "lucide-react";
+import html2canvas from "html2canvas";
 import type { RoadmapData } from "@shared/schema";
 
 export default function RoadmapGenerator() {
@@ -104,10 +105,78 @@ export default function RoadmapGenerator() {
   }, [currentRoadmap, saveMutation]);
 
   const handleExportPNG = useCallback(() => {
-    toast({
-      title: "Export",
-      description: "PNG export functionality coming soon!",
-    });
+    const svgElement = document.querySelector<SVGSVGElement>('#roadmap-svg');
+    if (!svgElement) {
+      toast({
+        title: "Error",
+        description: "Roadmap element not found.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { width, height } = svgElement.getBoundingClientRect();
+      const serializer = new XMLSerializer();
+      const svgString = serializer.serializeToString(svgElement);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width * 2;
+      canvas.height = height * 2;
+      const ctx = canvas.getContext('2d');
+
+      if (!ctx) {
+        throw new Error("Could not get canvas context");
+      }
+
+      const img = new Image();
+      const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+
+      img.onload = () => {
+        // 1. Scale the context for higher resolution
+        ctx.scale(2, 2);
+
+        // 2. Fill the background with white
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, width, height); // Use original width/height because context is scaled
+
+        // 3. Draw the SVG image on top
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        URL.revokeObjectURL(url);
+
+        // 4. Trigger the download
+        const a = document.createElement('a');
+        a.href = canvas.toDataURL('image/png');
+        a.download = 'roadmap.png';
+        a.click();
+
+        toast({
+          title: "Export Successful",
+          description: "Roadmap downloaded as PNG.",
+        });
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        toast({
+          title: "Export Error",
+          description: "Could not load SVG as an image.",
+          variant: "destructive"
+        });
+      };
+
+      img.src = url;
+
+    } catch (err) {
+      console.error("Export Error:", err);
+      toast({
+        title: "Export Error",
+        description: "An unexpected error occurred during export.",
+        variant: "destructive"
+      });
+    }
   }, [toast]);
 
   const handleExportSVG = useCallback(() => {
